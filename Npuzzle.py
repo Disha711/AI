@@ -1,102 +1,90 @@
 import tkinter as tk
-from tkinter import messagebox
-import random
+from tkinter import simpledialog, messagebox
 
-class Puzzle:
-    def __init__(self):
-        self.size = 3
-        self.board = self.generate_solved_board()
-        self.empty_tile = (2, 2)  # Position of the empty tile
-        self.shuffle_board()
-
-    def generate_solved_board(self):
-        return [[(i * self.size + j + 1) % (self.size ** 2) for j in range(self.size)] for i in range(self.size)]
-
-    def shuffle_board(self):
-        """ Shuffle the board randomly. """
-        for _ in range(1000):  # Number of shuffle moves
-            self.move_random()
-
-    def move_random(self):
-        """ Move a tile randomly. """
-        x, y = self.empty_tile
-        possible_moves = []
-        if x > 0: possible_moves.append((x - 1, y))  # Move tile from above
-        if x < self.size - 1: possible_moves.append((x + 1, y))  # Move tile from below
-        if y > 0: possible_moves.append((x, y - 1))  # Move tile from the left
-        if y < self.size - 1: possible_moves.append((x, y + 1))  # Move tile from the right
-        
-        move_to = random.choice(possible_moves)
-        self.swap_tiles(self.empty_tile, move_to)
-        self.empty_tile = move_to
-
-    def swap_tiles(self, pos1, pos2):
-        x1, y1 = pos1
-        x2, y2 = pos2
-        self.board[x1][y1], self.board[x2][y2] = self.board[x2][y2], self.board[x1][y1]
-
-    def move_tile(self, tile_position):
-        x, y = self.empty_tile
-        tx, ty = tile_position
-        if abs(x - tx) + abs(y - ty) == 1:
-            self.swap_tiles(self.empty_tile, tile_position)
-            self.empty_tile = tile_position
-
-    def is_solved(self):
-        return self.board == self.generate_solved_board()
-
-    def reset(self):
-        self.board = self.generate_solved_board()
-        self.empty_tile = (self.size - 1, self.size - 1)
-        self.shuffle_board()
-
-class PuzzleGUI:
-    def __init__(self, root):
-        self.puzzle = Puzzle()
+class NQueenGame:
+    def __init__(self, root, n):
         self.root = root
-        self.root.title("Number Puzzle Game")
-        self.buttons = [[None for _ in range(self.puzzle.size)] for _ in range(self.puzzle.size)]
-        self.create_widgets()
-        self.update_buttons()
-
-    def create_widgets(self):
-        for i in range(self.puzzle.size):
-            for j in range(self.puzzle.size):
-                button = tk.Button(self.root, text='', font=('Helvetica', 20, 'bold'), width=4, height=2,
-                                   command=lambda x=i, y=j: self.on_button_click(x, y),
-                                   relief=tk.RAISED, borderwidth=2, bg='lightblue', fg='black')
-                button.grid(row=i, column=j, padx=5, pady=5)
-                self.buttons[i][j] = button
-        
-        # Add Reset Button
-        reset_button = tk.Button(self.root, text='Reset', font=('Helvetica', 16, 'bold'), command=self.reset_game,
-                                 relief=tk.RAISED, borderwidth=2, bg='lightgreen', fg='black')
-        reset_button.grid(row=self.puzzle.size, column=0, columnspan=self.puzzle.size, pady=10, sticky='ew')
-
-    def update_buttons(self):
-        for i in range(self.puzzle.size):
-            for j in range(self.puzzle.size):
-                tile = self.puzzle.board[i][j]
-                if tile == 0:
-                    self.buttons[i][j].config(text='', bg='white')
+        self.n = n
+        self.board = [[0] * n for _ in range(n)]
+        self.buttons = [[None] * n for _ in range(n)]
+        self.root.title("N-Queen Problem")
+        self.root.configure(bg="lightblue")
+        self.create_board()
+        self.create_controls()
+    
+    def create_board(self):
+        for row in range(self.n):
+            for col in range(self.n):
+                button = tk.Button(self.root, width=4, height=2, font=("Arial", 16), command=lambda r=row, c=col: self.toggle_queen(r, c))
+                button.grid(row=row, column=col, padx=1, pady=1)
+                self.buttons[row][col] = button
+                if (row + col) % 2 == 0:
+                    button.configure(bg="white")
                 else:
-                    self.buttons[i][j].config(text=str(tile), bg='lightblue')
-
-    def on_button_click(self, x, y):
-        if (abs(x - self.puzzle.empty_tile[0]) + abs(y - self.puzzle.empty_tile[1])) == 1:
-            self.puzzle.move_tile((x, y))
-            self.update_buttons()
-            if self.puzzle.is_solved():
-                messagebox.showinfo("Congratulations", "You solved the puzzle!")
-
-    def reset_game(self):
-        self.puzzle.reset()
-        self.update_buttons()
-
-def main():
-    root = tk.Tk()
-    app = PuzzleGUI(root)
-    root.mainloop()
+                    button.configure(bg="gray")
+    
+    def create_controls(self):
+        control_frame = tk.Frame(self.root, bg="lightblue")
+        control_frame.grid(row=self.n, column=0, columnspan=self.n, pady=10)
+        
+        check_button = tk.Button(control_frame, text="Check Answer", command=self.check_solution, font=("Arial", 14), bg="green", fg="white")
+        check_button.pack(side=tk.LEFT, padx=5)
+        
+        restart_button = tk.Button(control_frame, text="Restart", command=self.restart_game, font=("Arial", 14), bg="red", fg="white")
+        restart_button.pack(side=tk.LEFT, padx=5)
+    
+    def toggle_queen(self, row, col):
+        if self.board[row][col] == 0:
+            self.board[row][col] = 1
+            self.buttons[row][col].config(text="Q", bg="yellow", fg="black")
+            if not self.is_valid_position(row, col):
+                self.board[row][col] = 0
+                self.buttons[row][col].config(text="", bg="red")
+                self.root.after(500, lambda: self.buttons[row][col].config(bg="white" if (row + col) % 2 == 0 else "gray"))
+                messagebox.showerror("Invalid Move", "A queen cannot be placed here. It conflicts with another queen.")
+        else:
+            self.board[row][col] = 0
+            self.buttons[row][col].config(text="", bg="white" if (row + col) % 2 == 0 else "gray")
+    
+    def is_valid_position(self, row, col):
+        for i in range(self.n):
+            if i != row and self.board[i][col] == 1:
+                return False
+        for j in range(self.n):
+            if j != col and self.board[row][j] == 1:
+                return False
+        for i in range(self.n):
+            for j in range(self.n):
+                if (i != row or j != col) and self.board[i][j] == 1:
+                    if abs(i - row) == abs(j - col):
+                        return False
+        return True
+    
+    def check_solution(self):
+        if self.is_valid_solution():
+            messagebox.showinfo("N-Queen Problem", "Congratulations! The solution is correct.")
+        else:
+            messagebox.showerror("N-Queen Problem", "The solution is incorrect. Try again.")
+    
+    def is_valid_solution(self):
+        queens = sum(sum(row) for row in self.board)
+        if queens != self.n:
+            return False
+        for row in range(self.n):
+            for col in range(self.n):
+                if self.board[row][col] == 1 and not self.is_valid_position(row, col):
+                    return False
+        return True
+    
+    def restart_game(self):
+        self.board = [[0] * self.n for _ in range(self.n)]
+        for row in range(self.n):
+            for col in range(self.n):
+                self.buttons[row][col].config(text="", bg="white" if (row + col) % 2 == 0 else "gray")
 
 if __name__ == "__main__":
-    main()
+    root = tk.Tk()
+    n = simpledialog.askinteger("N-Queen Problem", "Enter the number of queens:", minvalue=4, maxvalue=20)
+    if n:
+        game = NQueenGame(root, n)
+        root.mainloop()
